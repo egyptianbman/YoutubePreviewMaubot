@@ -36,30 +36,17 @@ class YoutubePreviewPlugin(Plugin):
             for subdomain in music_pattern.findall(evt.content.body):
                 if "music." in subdomain:
                     music_prefix = "music."
-            
+
             try:
                 music_prefix
             except:
                 music_prefix = ""
-            
+
             if "youtu.be" in url:
                 video_id = url.split("youtu.be/")[1]
             else:
                 video_id = urllib.parse.parse_qs(urllib.parse.urlparse(url).query)['v'][0]
                 video_id = video_id.split("?", 1)[0]
-
-            params = {"format": "json", "url": url}
-            query_url = "https://www.youtube.com/oembed"
-            query_string = urllib.parse.urlencode(params)
-            query_url = query_url + "?" + query_string
-            response = urllib.request.urlopen(query_url)
-            if response.status != 200:
-                self.log.warning(f"Unexpected status fetching video title {query_url}: {response.status}")
-                return None
-            response_text = response.read()
-            data = json.loads(response_text.decode())
-            msg = data['title'] + ": " + music_prefix + url
-            await evt.respond(msg)
 
             thumbnail_link = "https://img.youtube.com/vi/" + video_id + "/hqdefault.jpg"
             response = await self.http.get(thumbnail_link)
@@ -72,3 +59,18 @@ class YoutubePreviewPlugin(Plugin):
             await self.client.send_image(evt.room_id, url=uri, file_name=filename, info=ImageInfo(
                     mimetype='image/jpg'
                 ))
+
+            params = {"format": "json", "url": url}
+            query_url = "https://www.youtube.com/oembed"
+            query_string = urllib.parse.urlencode(params)
+            query_url = query_url + "?" + query_string
+            response = urllib.request.urlopen(query_url)
+            if response.status != 200:
+                self.log.warning(f"Unexpected status fetching video title {query_url}: {response.status}")
+                return None
+            response_text = response.read()
+            data = json.loads(response_text.decode())
+            msg = "**[" + data['title'] + "](" + music_prefix + url + ")**"
+            msg += " - *" + data['author_name'] + "*"
+
+            await evt.respond(msg)
